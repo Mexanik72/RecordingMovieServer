@@ -1,7 +1,5 @@
 package server;
 
-import java.awt.BorderLayout;
-import java.awt.Color;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
@@ -13,37 +11,18 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.sql.Date;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
-import javax.swing.JFrame;
-import javax.swing.JProgressBar;
-import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
-
 public class ServerPart {
-	
-	private JTextArea area;
-	private JProgressBar jpb;
-	private JFrame f;
 
 	private DataInputStream din = null;
 	private DataOutputStream outD = null;
 	private Socket soket = null;
 
 	ServerPart() {
-		f = new JFrame("Server");
-		f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		f.setSize(200, 250);
-		f.setLayout(new BorderLayout());
-		area = new JTextArea();
-		f.add(area, BorderLayout.CENTER);
-		JScrollPane sp = new JScrollPane(area);
-		f.getContentPane().add(sp);
-		f.setAlwaysOnTop(true);
-		f.setVisible(true);
-		area.setBackground(Color.LIGHT_GRAY);
 		connect();
 	}
 
@@ -52,25 +31,18 @@ public class ServerPart {
 		try {
 			ServerSocket ss = new ServerSocket(port);
 			while (true) {
-				area.append("Ожидание подключения...\n");
-				jpb = new JProgressBar();
-				jpb.setIndeterminate(true);
-				jpb.setForeground(Color.black);
-				f.add(jpb, BorderLayout.AFTER_LAST_LINE);
 				soket = ss.accept();
 				InputStream in = soket.getInputStream();
 				din = new DataInputStream(in);
 				outD = new DataOutputStream(soket.getOutputStream());
-				area.append("Передается файл\n");
-				area.append("Прием нового файла: \n");
 				int flag = din.readInt();
 
 				if (flag == 0)
 					sendVideo();
-				else if (flag == 1)
-					sendButtonIcon();
-				else if (flag == 2)
-					sendUserIcon();
+//				else if (flag == 1)
+//					sendButtonIcon();
+//				else if (flag == 2)
+//					sendUserIcon();
 				else if (flag == 3)
 					getVideo();
 				else if (flag == 4)
@@ -99,17 +71,40 @@ public class ServerPart {
 					getScoreById();
 				else if (flag == 16)
 					getFiveTopUsers();
+				else if (flag == 17)
+					addRateToMovie();
+				else if (flag == 18)
+					addScore();
 				else
-					throw new Exception();
-
+					break;
 			}
+			ss.close();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
 
-	private void getFiveTopUsers() throws Exception {
+	private void addScore() throws Exception {
 		// TODO Auto-generated method stub
+		ObjectInputStream in = new ObjectInputStream(soket.getInputStream());
+		int attempt = din.readInt();
+		User userNow = (User) in.readObject();
+		Movie movieNow = (Movie) in.readObject();
+		DataBaseScore dbs = new DataBaseScore();
+		DataBaseWord dbw = new DataBaseWord();
+		int rate = dbw.getWordById(movieNow.getWord());
+		java.util.Date someDate = Calendar.getInstance()
+				.getTime();
+		java.sql.Date sqlDate = new java.sql.Date(someDate
+				.getTime());
+		Score score = new Score();
+		score.setDate(sqlDate);
+		score.setUser(userNow.getId());
+		score.setRate(rate * attempt);
+		dbs.addScore(score);
+	}
+
+	private void getFiveTopUsers() throws Exception {
 		DataBaseScore dbs = new DataBaseScore();
 		List<Score> listScores = dbs.getFiveTopUser();
 		ObjectOutputStream out = new ObjectOutputStream(soket.getOutputStream());
@@ -118,7 +113,6 @@ public class ServerPart {
 	}
 
 	private void getScoreById() throws Exception {
-		// TODO Auto-generated method stub
 		DataBaseScore dbs = new DataBaseScore();
 		int userNow = din.readInt();
 		int scoreInt = dbs.getScoreByUser(userNow);
@@ -126,7 +120,6 @@ public class ServerPart {
 	}
 
 	private void getIdByWords() throws IOException {
-		// TODO Auto-generated method stub
 		Word wordNow = null;
 		DataBaseWord dw = new DataBaseWord();
 		String word = din.readUTF();
@@ -141,7 +134,6 @@ public class ServerPart {
 	}
 
 	private void getWordsWhereC() throws IOException {
-		// TODO Auto-generated method stub
 		DataBaseWord dw = new DataBaseWord();
 		ArrayList<String> Words = null;
 		int categoryNow = din.readInt();
@@ -149,7 +141,6 @@ public class ServerPart {
 		try {
 			Words = (ArrayList<String>) dw.getWordsWhereC(categoryNow);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		
@@ -159,7 +150,6 @@ public class ServerPart {
 	}
 
 	private void addScoreAndMovie() throws IOException, ClassNotFoundException {
-		// TODO Auto-generated method stub
 		Movie mv = new Movie();
 		DataBaseMovies db = new DataBaseMovies();
 		
@@ -167,7 +157,6 @@ public class ServerPart {
 		ObjectInputStream in = new ObjectInputStream(soket.getInputStream());
 		User userNow = (User) in.readObject();
 		Word wordNow = (Word) in.readObject();
-		in.close();
 		
 		mv.setOwner(userNow.getId());
 		mv.setName(fileName);
@@ -181,30 +170,27 @@ public class ServerPart {
 			java.sql.Date sqlDate = new java.sql.Date(someDate.getTime());
 			Score score = new Score();
 			score.setDate(sqlDate);
-			//score.setDate(new Date(System.currentTimeMillis()));
 			score.setUser(userNow.getId());
 			score.setRate(scoreNow);
-			dbs.addScore(score);
+			DataBaseScore dbs1 = new DataBaseScore();
+			dbs1.addScore(score);
 		} catch (Exception e1) {
-			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
 		try {
 			db.addMovie(mv);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
 
 	private void getMoviesIds() throws IOException {
-		// TODO Auto-generated method stub
+		
 		DataBaseMovies dbmv = new DataBaseMovies();
 		List<Integer> ListIdmovies = null;
 		try {
 			ListIdmovies = dbmv.getMoviesIds();
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		ObjectOutputStream out = new ObjectOutputStream(soket.getOutputStream());
@@ -213,7 +199,7 @@ public class ServerPart {
 	}
 
 	private void getMovieByCategor() throws IOException {
-		// TODO Auto-generated method stub
+		
 		DataBaseMovies dbm = new DataBaseMovies();
 		List<Movie> movies = new ArrayList<Movie>();
 		System.out.println("server is ok");
@@ -221,9 +207,7 @@ public class ServerPart {
         
 		try {
 			movies = dbm.getMovieByCategor(categor);
-			// words = (ArrayList<Integer>) dbw.getIdByCategories(categor);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		
@@ -233,47 +217,34 @@ public class ServerPart {
 	}
 
 	private void getKeyWords() throws IOException, ClassNotFoundException {
-		// TODO Auto-generated method stub
 		DataBaseMovies dbm = new DataBaseMovies();
-		List<String> Key_words = null;
-		ObjectInputStream in = new ObjectInputStream(soket.getInputStream());
-		Movie movieNow = (Movie) in.readObject();
-		in.close();
-		int rate = din.readInt();
-		String text = din.readUTF();
-		try {
-			Key_words = dbm.getKeyWords(movieNow.getWord());
-		} catch (Exception e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
-		boolean guess = false;
-		for (int i = 0; i < Key_words.size(); i++) {
-			if (Key_words.get(i).equals(text)) {
-				guess = true;
-
-				java.util.Date someDate = Calendar.getInstance()
-						.getTime();
-				java.sql.Date sqlDate = new java.sql.Date(someDate
-						.getTime());
-				
-				try {
-					dbm.addRatetoMovie(movieNow, sqlDate, rate+1);
-				} catch (Exception e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
-				break;
-			} else {
-				guess = false;
-			}
-		}
-		
-		outD.writeBoolean(guess);
+		  List<String> Key_words = null;
+		  
+		  int movie = din.readInt();
+		  
+		  try {
+		   Key_words = dbm.getKeyWords(movie);
+		  } catch (Exception e1) {
+		   e1.printStackTrace();
+		  }
+		  ObjectOutputStream out = new ObjectOutputStream(soket.getOutputStream());
+		        out.writeObject(Key_words);
 	}
 
+	private void addRateToMovie() throws IOException, ClassNotFoundException {
+		  DataBaseMovies dbm = new DataBaseMovies();
+			ObjectInputStream in = new ObjectInputStream(soket.getInputStream());
+		  Movie movieNow = (Movie) in.readObject();
+		  java.sql.Date sqlDate = (Date) in.readObject();
+		  int rate = din.readInt();
+		  try {
+		   dbm.addRatetoMovie(movieNow, sqlDate, rate + 1);
+		  } catch (Exception e1) {
+		   e1.printStackTrace();
+		  }
+		 }
+	
 	private void addUser() throws ClassNotFoundException, IOException {
-		// TODO Auto-generated method stub
 		ObjectInputStream in = new ObjectInputStream(soket.getInputStream());
 		User user = (User) in.readObject();
 		in.close();
@@ -281,20 +252,17 @@ public class ServerPart {
 		try {
 			db.addUser(user);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
 
 	private void authentication() throws IOException {
-		// TODO Auto-generated method stub
 		DataBaseUsers db = new DataBaseUsers();
 		List<String> usersNames = null;
 		User User = new User();
 		try {
 			usersNames = db.getUsersNames();
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		String user = din.readUTF();
@@ -308,7 +276,6 @@ public class ServerPart {
 				try {
 					User = db.getUserByUsername(usersNames.get(i));
 				} catch (Exception e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 				if (User.getPassword().equals(pass)) {
@@ -328,20 +295,17 @@ public class ServerPart {
 	}
 
 	private void setImg() throws IOException {
-		// TODO Auto-generated method stub
 		DataBaseUsers db = new DataBaseUsers();
 		int id = din.readInt();
 		String img = din.readUTF();
 		try {
 			db.setImg(id, img);
 		} catch (Exception e1) {
-			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
 	}
 
 	private void sendIdByCategories() throws Exception {
-		// TODO Auto-generated method stub
 		Categories categ;
 		DataBaseWord dw = new DataBaseWord();
 		String str = din.readUTF();
@@ -352,13 +316,11 @@ public class ServerPart {
 	}
 
 	private void sendCategories() throws IOException {
-		// TODO Auto-generated method stub
 		ArrayList<String> Categories = null;
 		DataBaseWord dw = new DataBaseWord();
 		try {
 			Categories = (ArrayList<String>) dw.getCategories();
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		ObjectOutputStream out = new ObjectOutputStream(soket.getOutputStream());
@@ -367,43 +329,23 @@ public class ServerPart {
 	}
 
 	private void getVideo() throws IOException {
-		// TODO Auto-generated method stub
-		long fileSize = din.readLong(); // получаем размер файла
-		int fsaize = (int) (fileSize / (1024));
-		String fileName = din.readUTF(); // прием имени файла
-		area.append("Имя файла: " + fileName + "\n");
-		area.append("Размер файла: " + fileSize + " байт\n");
-		jpb.setMaximum(fsaize);
-		jpb.setIndeterminate(false);
+		long fileSize = din.readLong();
+		String fileName = din.readUTF();
 		byte[] buffer = new byte[64 * 1024];
 		FileOutputStream outF = new FileOutputStream(fileName);
 		int count, total = 0;
 		while ((count = din.read(buffer)) != -1) {
 			total += count;
 			outF.write(buffer, 0, count);
-			jpb.setValue(total / 1024);
 			if (total == fileSize) {
 				break;
 			}
 		}
 		outF.flush();
 		outF.close();
-		area.append("Файл принят\n---------------------------------\n");
-		jpb.setVisible(false);
-	}
-
-	private void sendUserIcon() {
-		// TODO Auto-generated method stub
-
-	}
-
-	private void sendButtonIcon() {
-		// TODO Auto-generated method stub
-
 	}
 
 	private void sendVideo() {
-		// TODO Auto-generated method stub
 		try {
 			String str = din.readUTF();
 			try {
@@ -425,7 +367,6 @@ public class ServerPart {
 				e.printStackTrace();
 			}
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 
