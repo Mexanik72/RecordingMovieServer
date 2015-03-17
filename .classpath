@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry excluding="src/server/" kind="src" path="server"/>
+	<classpathentry kind="src" path="server/src/server"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="C:/Program Files (x86)/JMF2.1.1e/lib/ojdbc7.jar"/>
+	<classpathentry kind="lib" path="C:/Program Files (x86)/JMF2.1.1e/lib/postgresql-9.3-1102.jdbc41.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
