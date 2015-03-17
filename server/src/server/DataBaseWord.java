@@ -125,7 +125,6 @@ public class DataBaseWord {
 	}
 
 	public int getCount() throws Exception {
-		Connection con = GetConnection.getConnection();
 		PreparedStatement st = con
 				.prepareStatement("SELECT COUNT(*) FROM words;");
 		ResultSet rs = st.executeQuery();
@@ -140,4 +139,22 @@ public class DataBaseWord {
 
 		return count;
 	}
+	
+	public int getWordById(int id) throws Exception {
+		  int rate = 0;
+
+		  PreparedStatement st = con.prepareStatement(
+		    "Select  rate " + "From words " + "Where id = ?");
+		  st.setInt(1, id);
+		  
+		  ResultSet rs = st.executeQuery();
+		  
+		  while (rs.next()) {
+		   rate = rs.getInt(1);
+		  }
+		  st.close();
+		  rs.close();
+		  con.close();
+		  return rate;
+		 }
 }
